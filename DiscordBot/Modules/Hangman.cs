@@ -9,6 +9,7 @@ namespace DiscordBot.Modules
     public class Hangman : ModuleBase<SocketCommandContext>
     {
         private static Game NewGame;
+
         [Command("NewGame")]
         public async Task NewGameAsync()
         {
@@ -19,7 +20,8 @@ namespace DiscordBot.Modules
                 SortedWord = new List<string>(),
                 GuesedLetters = new List<string>(),
                 DiscoveredSoFar = new List<string>(),
-                GuessRemain = 8
+                GuessRemain = 8,
+                ReplayAsked = false,
             };
 
             //Trying an Idea, Get all the Letters in the word then Put them in a list, This way I can print the ones I care about.
@@ -81,7 +83,7 @@ namespace DiscordBot.Modules
                 if (NewGame.GuessRemain <= 0)
                 {
                     await ReplyAsync("Game Over, The word was " + NewGame.Word);
-                    NewGame = null;
+                    await PlayAgain();
                 }
                 else
                 {
@@ -92,6 +94,7 @@ namespace DiscordBot.Modules
             {
                 await ReplyAsync("Great Job! The word was " + NewGame.Word);
                 NewGame = null;
+                await PlayAgain();
             }
         }
         public static string GetNewWord()
@@ -117,7 +120,36 @@ namespace DiscordBot.Modules
             var Pick = Picker.Next(0, NewWord.Count);
             return NewWord[Pick];
         }
+
+        [Command("I guess")]
+        public async Task GuessTheWord(string c)
+        {
+            if (c == NewGame.Word)
+            {
+                await ReplyAsync("$Well done, you've correctly guessed the word, with {NewGame.GuessRemain} Guesses remaining");
+                await PlayAgain();
+            }
+
+        }
+
+        [Command("Yes")]
+        public async Task UserWantsToPlayAgain(string c)
+        {
+            if (NewGame.ReplayAsked == true)
+            {
+                await NewGameAsync();
+            }
+        }
+
+        public async Task PlayAgain()
+        {
+            await ReplyAsync("Would you like to play again?");
+            NewGame = null;
+            NewGame.ReplayAsked = true;
+        }
+
     }
+
     public class Game
     {
         public string Word { get; set; }
@@ -125,5 +157,6 @@ namespace DiscordBot.Modules
         public List<string> DiscoveredSoFar { get; set; }
         public List<string> GuesedLetters { get; set; }
         public int GuessRemain { get; set; }
+        public Boolean ReplayAsked { get; set; }
     }
 }
