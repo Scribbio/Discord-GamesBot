@@ -9,7 +9,6 @@ namespace DiscordBot.Modules
     public class Hangman : ModuleBase<SocketCommandContext>
     {
         private static Game NewGame;
-        private bool ReplayAsked = false;
 
         [Command("NewGame")]
         public async Task NewGameAsync()
@@ -21,6 +20,7 @@ namespace DiscordBot.Modules
                 SortedWord = new List<string>(),
                 GuesedLetters = new List<string>(),
                 DiscoveredSoFar = new List<string>(),
+                HangMan = "",
                 GuessRemain = 8,
                 
             };
@@ -81,6 +81,8 @@ namespace DiscordBot.Modules
             else
             {
                 NewGame.GuessRemain--;
+                await ReplyAsync(HangManToPrint(NewGame.GuessRemain + 1));
+
                 if (NewGame.GuessRemain <= 0)
                 {
                     await ReplyAsync("Game Over, The word was " + NewGame.Word);
@@ -122,6 +124,7 @@ namespace DiscordBot.Modules
             return NewWord[Pick];
         }
 
+        //If the users wants to guess the whole word.
         [Command("The word is")]
         public async Task GuessTheWord(string c)
         {
@@ -136,32 +139,61 @@ namespace DiscordBot.Modules
             }
 
         }
-
         [Command("Yes")]
-        public async Task UserWantsToPlayAgain(string c)
+        public async Task UserWantsToPlayAgain()
         {
-            if (ReplayAsked == true)
+            if (NewGame.ReplayAsked == true)
             {
+                NewGame = null;
                 await NewGameAsync();
-
             }
         }
-
         public async Task PlayAgain()
         {
             await ReplyAsync("Would you like to play again?");
-            NewGame = null;
-            ReplayAsked = true;
+            NewGame.ReplayAsked = true;
+        } 
+        public string HangManToPrint(int numberOfIncorrectGuesses)
+        {
+            switch (numberOfIncorrectGuesses)
+            {
+                case 8:
+                    return "\n" + "\n|" + "\n|" + "\n|" + "\n|" + "\n|" + "\n|_______________________\n";
+          
+                case 7:
+                    return "\n_________" + "\n|" + "\n|" + "\n|" + "\n|" + "\n|" + "\n|_______________________\n";
+            
+                case 6:
+                    return "\n_________" + "\n|                   |" + "\n|" + "\n|" + "\n|" + "\n|" + "\n|_______________________\n";
+        
+                case 5:
+                    return  "\n_________" + "\n|                   |" + "\n|                  O" + "\n|" + "\n|" + "\n|" + "\n|_______________________\n";
+           
+                case 4:
+                    return "\n_________" + "\n|                   |" + "\n|                  O" + "\n|                   |" + "\n|" + "\n|" + "\n|_______________________\n";
+          
+                case 3:
+                    return "\n_________" + "\n|                   |" + "\n|                  O" + "\n|               ---|" + "\n|" + "\n|" + "\n|_______________________\n";
+      
+                case 2:
+                    return "\n_________" + "\n|                   |" + "\n|                  O" + "\n|               ---|---" + "\n|" + "\n|" + "\n|_______________________\n";
+
+                case 1:
+                    return "\n_________" + "\n|                   |" + "\n|                  O" + "\n|               ---|---" + "\n|                  /" + "\n|                /" + "\n|_______________________\n";
+            }
+            return "";
         }
-
     }
-
     public class Game
     {
         public string Word { get; set; }
         public List<string> SortedWord { get; set; }
         public List<string> DiscoveredSoFar { get; set; }
         public List<string> GuesedLetters { get; set; }
+        public string HangMan { get; set; }
         public int GuessRemain { get; set; }
+        public bool ReplayAsked = false;
+
     }
 }
+
