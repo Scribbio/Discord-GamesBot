@@ -20,7 +20,7 @@ public class Program
         _commands = new CommandService();
 
         // Avoid hard coding your token. Use an external source instead in your code.
-        string token = "bot token here";
+        string token = "NDE4OTYzMjkwNTYwMDA0MTA3.DXpRQQ.rcRtMV8Vo0bOUose7cbUrlSDkWs";
 
         _services = new ServiceCollection()
             .AddSingleton(_client)

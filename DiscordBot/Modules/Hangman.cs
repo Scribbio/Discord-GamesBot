@@ -9,6 +9,7 @@ namespace DiscordBot.Modules
     public class Hangman : ModuleBase<SocketCommandContext>
     {
         private static Game NewGame;
+        private bool ReplayAsked = false;
 
         [Command("NewGame")]
         public async Task NewGameAsync()
@@ -21,7 +22,7 @@ namespace DiscordBot.Modules
                 GuesedLetters = new List<string>(),
                 DiscoveredSoFar = new List<string>(),
                 GuessRemain = 8,
-                ReplayAsked = false,
+                
             };
 
             //Trying an Idea, Get all the Letters in the word then Put them in a list, This way I can print the ones I care about.
@@ -121,13 +122,17 @@ namespace DiscordBot.Modules
             return NewWord[Pick];
         }
 
-        [Command("I guess")]
+        [Command("The word is")]
         public async Task GuessTheWord(string c)
         {
-            if (c == NewGame.Word)
+            if (c.ToLower() == NewGame.Word)
             {
-                await ReplyAsync("$Well done, you've correctly guessed the word, with {NewGame.GuessRemain} Guesses remaining");
+                await ReplyAsync($"Well done, you've correctly guessed the word, with {NewGame.GuessRemain} Guesses remaining");
                 await PlayAgain();
+            }
+            else
+            {
+                await ReplyAsync("No! Try again.");
             }
 
         }
@@ -135,9 +140,10 @@ namespace DiscordBot.Modules
         [Command("Yes")]
         public async Task UserWantsToPlayAgain(string c)
         {
-            if (NewGame.ReplayAsked == true)
+            if (ReplayAsked == true)
             {
                 await NewGameAsync();
+
             }
         }
 
@@ -145,7 +151,7 @@ namespace DiscordBot.Modules
         {
             await ReplyAsync("Would you like to play again?");
             NewGame = null;
-            NewGame.ReplayAsked = true;
+            ReplayAsked = true;
         }
 
     }
@@ -157,6 +163,5 @@ namespace DiscordBot.Modules
         public List<string> DiscoveredSoFar { get; set; }
         public List<string> GuesedLetters { get; set; }
         public int GuessRemain { get; set; }
-        public Boolean ReplayAsked { get; set; }
     }
 }
