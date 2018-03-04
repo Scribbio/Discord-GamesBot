@@ -21,7 +21,7 @@ namespace DiscordBot.Modules
                 GuesedLetters = new List<string>(),
                 DiscoveredSoFar = new List<string>(),
                 HangMan = "",
-                GuessRemain = 8,
+                GuessRemain = 9,
                 
             };
 
@@ -81,7 +81,7 @@ namespace DiscordBot.Modules
             else
             {
                 NewGame.GuessRemain--;
-                await ReplyAsync(HangManToPrint(NewGame.GuessRemain + 1));
+                await ReplyAsync(HangManToPrint(NewGame.GuessRemain));
 
                 if (NewGame.GuessRemain <= 0)
                 {
@@ -179,7 +179,11 @@ namespace DiscordBot.Modules
                     return "\n_________" + "\n|                   |" + "\n|                  O" + "\n|               ---|---" + "\n|" + "\n|" + "\n|_______________________\n";
 
                 case 1:
-                    return "\n_________" + "\n|                   |" + "\n|                  O" + "\n|               ---|---" + "\n|                  /" + "\n|                /" + "\n|_______________________\n";
+                    return "\n_________" + "\n|                   |" + "\n|                  O" + "\n|               ---|---" + "\n|                  /" + "\n|                " + "\n|_______________________\n";
+
+                case 0:
+                    return "\n_________" + "\n|                   |" + "\n|                  O" + "\n|               ---|---" + "\n|                  /\n|" + "\n|                " + "\n|_______________________\n";
+
             }
             return "";
         }
