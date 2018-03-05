@@ -4,6 +4,16 @@ namespace DiscordBot.Modules
 {
     internal interface IGame
     {
+        bool QuestionAsked
+        {
+            get;
+        }
+
+        string Question
+        {
+            get;
+        }
+
         Task CreateNewGame();
 
         Task ResetGame();
@@ -11,10 +21,6 @@ namespace DiscordBot.Modules
         Task Yes();
 
         Task No();
-
-        Task GuessAWord(string guessedWord, bool overrideCheck = false);
-
-        Task GuessALetter(char guessedLetter);
 
         Task Help();
     }

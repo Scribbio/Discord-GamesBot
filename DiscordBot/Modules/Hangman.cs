@@ -9,18 +9,10 @@ namespace DiscordBot.Modules
 {
     public class Hangman : ModuleBase<SocketCommandContext>, IGame
     {
-        private SocketCommandContext m_Context = null;
-        private new SocketCommandContext Context
-        {
-            get
-            {
-                return m_Context;
-            }
-        }
+        private new SocketCommandContext Context;
 
         private bool ReplayAsked = false;
         private bool WordAccident = false;
-        private bool QuestionAsked = false;
 
         private int GuessesRemaining;
         private string GuessesRemainingString
@@ -37,18 +29,14 @@ namespace DiscordBot.Modules
 
         private List<char> GuessedLetters;
 
-        private string m_Question;
-        private string Question
+        public bool QuestionAsked
         {
-            get
-            {
-                return m_Question;
-            }
-            set
-            {
-                QuestionAsked = true;
-                m_Question = value;
-            }
+            get { return Question.Length > 0; }
+        }
+
+        public string Question
+        {
+            get; protected set;
         }
 
         //The list of words to select from.
@@ -938,14 +926,14 @@ namespace DiscordBot.Modules
 
         public Hangman(SocketCommandContext context)
         {
-            m_Context = context;
+            Context = context;
         }
 
         public async Task CreateNewGame()
         {
             ReplayAsked = false;
             WordAccident = false;
-            QuestionAsked = false;
+            Question = String.Empty;
 
             GuessesRemaining = 9;
 
@@ -968,20 +956,26 @@ namespace DiscordBot.Modules
 
         private static string GetNewWord()
         {
-            Random Picker = new Random();
-            int Pick = Picker.Next(0, WordDictionary.Count);
-            return WordDictionary[Pick];
+            Random picker = new Random();
+            int pickIndex = picker.Next(0, WordDictionary.Count);
+            return WordDictionary[pickIndex];
         }
 
         public async Task ResetGame()
         {
-            Question = "Are you sure you want to reset the game? [!Yes/!No]";
+            if (GuessesRemaining > 0)
+            {
+                Question = "Are you sure you want to reset the game? [!Yes/!No]";
+            }
+
             await Context.Channel.SendMessageAsync(Question);
             ReplayAsked = true;
         }
 
         public async Task Yes()
         {
+            Question = String.Empty;
+
             if (ReplayAsked)
             {
                 await CreateNewGame();
@@ -990,7 +984,6 @@ namespace DiscordBot.Modules
 
             if (WordAccident)
             {
-                QuestionAsked = false;
                 WordAccident = false;
                 await GuessAWord(WordGuessed, true);
                 return;
@@ -1001,16 +994,13 @@ namespace DiscordBot.Modules
 
         public async Task No()
         {
-            if (QuestionAsked)
-            {
-                ReplayAsked = false;
-                QuestionAsked = false;
-                WordAccident = false;
-                await Context.Channel.SendMessageAsync("Okay!");
-                return;
-            }
+            Question = String.Empty;
 
-            await Context.Channel.SendMessageAsync("Huh?");
+            ReplayAsked = false;
+            WordAccident = false;
+
+            await Context.Channel.SendMessageAsync("Okay!");
+            return;
         }
 
         public async Task GuessAWord(string guessedWord, bool overrideCheck = false)
@@ -1023,12 +1013,6 @@ namespace DiscordBot.Modules
 
             if (!overrideCheck)
             {
-                if (QuestionAsked)
-                {
-                    await Context.Channel.SendMessageAsync($"Please respond to the question before continuing... {Question}");
-                    return;
-                }
-
                 if (guessedWord.Length <= 1)
                 {
                     Question = "Did you mean to guess a word? [!Yes/!No]";
@@ -1060,12 +1044,6 @@ namespace DiscordBot.Modules
                 return;
             }
 
-            if (QuestionAsked)
-            {
-                await Context.Channel.SendMessageAsync($"Please respond to the question before continuing... {Question}");
-                return;
-            }
-
             if (GuessedLetters.Contains(guessedLetter))
             {
                 await Context.Channel.SendMessageAsync($"The letter {guessedLetter} has already been guessed! Try again!");
@@ -1090,22 +1068,22 @@ namespace DiscordBot.Modules
             }
 
             //Bool to switch off if there is still an unguessed character
-            bool GameComplete = !DiscoveredSoFar.Contains("-");
-            if (GameComplete)
+            bool gameComplete = !DiscoveredSoFar.Contains("-");
+            if (gameComplete)
             {
                 await Context.Channel.SendMessageAsync($"Great Job! The word was {Word}. {PlayAgain()}");
                 return;
             }
 
             //Return the letters guessed so far
-            string GuessedSoFar = String.Join(", ", GuessedLetters);
-            string SoFar = $"So far you have {DiscoveredSoFar} and you have already tried {GuessedSoFar}";
+            string guessedSoFar = String.Join(", ", GuessedLetters);
+            string alreadyTried = $"So far you have {DiscoveredSoFar} and you have already tried {guessedSoFar}";
 
             //Return the Letters that were correctly guessed in their correct position.
             bool GuessedRight = Word.Contains(guessedLetter);
             if (GuessedRight)
             {
-                await Context.Channel.SendMessageAsync($"You Got It! {SoFar}");
+                await Context.Channel.SendMessageAsync($"You Got It! {alreadyTried}");
             }
             else
             {
@@ -1117,7 +1095,7 @@ namespace DiscordBot.Modules
                 }
                 else
                 {
-                    await Context.Channel.SendMessageAsync($"{HangmanOutput}Sorry that was not a letter, try again! You have {GuessesRemaining}. {SoFar}");
+                    await Context.Channel.SendMessageAsync($"{HangmanOutput}Sorry that was not a letter, try again! You have {GuessesRemaining}. {alreadyTried}");
                 }
             }
         }
@@ -1140,7 +1118,7 @@ namespace DiscordBot.Modules
                                                    "!Quit - Quits the game." + Environment.NewLine +
                                                    "!Help - Shows this output." + Environment.NewLine +
                                                    "   !Yes - Response in the affirmative to a question." + Environment.NewLine +
-                                                   "   !No - Responds in the negative to a question."+
+                                                   "   !No - Responds in the negative to a question." +
                                                    "```");
         }
     }

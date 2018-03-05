@@ -39,10 +39,16 @@ namespace DiscordBot.Modules
                 await ReplyAsync($"You can only guess a single letter at a time! Try [!WordIs] to guess a word.");
                 return;
             }
-            
+
+            if (HangmanGames[Context.Channel].QuestionAsked)
+            {
+                await Context.Channel.SendMessageAsync($"Please respond to the question before continuing... {HangmanGames[Context.Channel].Question}");
+                return;
+            }
+
             //TODO: Is there a better way to do this?
-            Hangman CurrentGame = HangmanGames[Context.Channel] as Hangman;
-            await CurrentGame.GuessALetter(letter[0]);
+            Hangman currentGame = HangmanGames[Context.Channel] as Hangman;
+            await currentGame.GuessALetter(letter.ToLower()[0]);
         }
 
         //If the users wants to guess the whole word.
@@ -55,7 +61,15 @@ namespace DiscordBot.Modules
                 return;
             }
 
-            await HangmanGames[Context.Channel].GuessAWord(guessedWord);
+            if (HangmanGames[Context.Channel].QuestionAsked)
+            {
+                await Context.Channel.SendMessageAsync($"Please respond to the question before continuing... {HangmanGames[Context.Channel].Question}");
+                return;
+            }
+
+            //TODO: Is there a better way to do this?
+            Hangman currentGame = HangmanGames[Context.Channel] as Hangman;
+            await currentGame.GuessAWord(guessedWord);
         }
 
         [Command("Yes")]
