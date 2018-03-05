@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace DiscordBot.Modules
 {
-    public class Hangman : ModuleBase<SocketCommandContext>
+    public class Hangman : ModuleBase<SocketCommandContext>, IGame
     {
         private SocketCommandContext m_Context = null;
         private new SocketCommandContext Context
@@ -22,7 +22,14 @@ namespace DiscordBot.Modules
         private bool WordAccident = false;
         private bool QuestionAsked = false;
 
-        private int GuessesRemainging;
+        private int GuessesRemaining;
+        private string GuessesRemainingString
+        {
+            get
+            {
+                return $"{GuessesRemaining} guesses remaining.";
+            }
+        }
 
         private string Word;
         private string DiscoveredSoFar;
@@ -903,7 +910,7 @@ namespace DiscordBot.Modules
         {
             get
             {
-                switch (GuessesRemainging)
+                switch (GuessesRemaining)
                 {
                     case 8:
                         return "```\n/ ---|\n|\n|\n|\n|\n```";
@@ -940,7 +947,7 @@ namespace DiscordBot.Modules
             WordAccident = false;
             QuestionAsked = false;
 
-            GuessesRemainging = 9;
+            GuessesRemaining = 9;
 
             Word = GetNewWord();
             DiscoveredSoFar = new string('-', Word.Length);
@@ -956,10 +963,10 @@ namespace DiscordBot.Modules
             Word = String.Empty;
             DiscoveredSoFar = String.Empty;
             GuessedLetters = new List<char>();
-            GuessesRemainging = 0;
+            GuessesRemaining = 0;
         }
 
-        public static string GetNewWord()
+        private static string GetNewWord()
         {
             Random Picker = new Random();
             int Pick = Picker.Next(0, WordDictionary.Count);
@@ -1008,7 +1015,7 @@ namespace DiscordBot.Modules
 
         public async Task GuessAWord(string guessedWord, bool overrideCheck = false)
         {
-            if (GuessesRemainging <= 0)
+            if (GuessesRemaining <= 0)
             {
                 await Context.Channel.SendMessageAsync("You do not have any guesses remainging, please [!ResetGame] or [!Quit] and start a different game.");
                 return;
@@ -1018,8 +1025,7 @@ namespace DiscordBot.Modules
             {
                 if (QuestionAsked)
                 {
-                    await Context.Channel.SendMessageAsync("Please respond to the question before continuing...");
-                    await Context.Channel.SendMessageAsync(Question);
+                    await Context.Channel.SendMessageAsync($"Please respond to the question before continuing... {Question}");
                     return;
                 }
 
@@ -1035,15 +1041,12 @@ namespace DiscordBot.Modules
 
             if (guessedWord.ToLower() == Word)
             {
-                await Context.Channel.SendMessageAsync($"Well done, you've correctly guessed the word, with {GuessesRemainging} guesses remaining.");
-                GameEnd();
-                await PlayAgain();
+                await Context.Channel.SendMessageAsync($"Well done, you've correctly guessed the word, with {GuessesRemainingString} {PlayAgain()}");
             }
             else
             {
-                GuessesRemainging--;
-                await Context.Channel.SendMessageAsync(HangmanOutput);
-                await Context.Channel.SendMessageAsync($"No! You have {GuessesRemainging} guesses left.");
+                GuessesRemaining--;
+                await Context.Channel.SendMessageAsync($"{HangmanOutput} No! You have {GuessesRemainingString}");
             }
 
             WordGuessed = String.Empty;
@@ -1051,7 +1054,7 @@ namespace DiscordBot.Modules
 
         public async Task GuessALetter(char guessedLetter)
         {
-            if (GuessesRemainging <= 0)
+            if (GuessesRemaining <= 0)
             {
                 await Context.Channel.SendMessageAsync("You do not have any guesses remainging, please [!ResetGame] or [!Quit] and start a different game.");
                 return;
@@ -1059,8 +1062,7 @@ namespace DiscordBot.Modules
 
             if (QuestionAsked)
             {
-                await Context.Channel.SendMessageAsync("Please respond to the question before continuing...");
-                await Context.Channel.SendMessageAsync(Question);
+                await Context.Channel.SendMessageAsync($"Please respond to the question before continuing... {Question}");
                 return;
             }
 
@@ -1091,10 +1093,8 @@ namespace DiscordBot.Modules
             bool GameComplete = !DiscoveredSoFar.Contains("-");
             if (GameComplete)
             {
-                await Context.Channel.SendMessageAsync($"Great Job! The word was {Word}");
-                GameEnd();
-
-                await PlayAgain();
+                await Context.Channel.SendMessageAsync($"Great Job! The word was {Word}. {PlayAgain()}");
+                return;
             }
 
             //Return the letters guessed so far
@@ -1109,26 +1109,26 @@ namespace DiscordBot.Modules
             }
             else
             {
-                GuessesRemainging--;
-                await Context.Channel.SendMessageAsync(HangmanOutput);
+                GuessesRemaining--;
 
-                if (GuessesRemainging <= 0)
+                if (GuessesRemaining <= 0)
                 {
-                    await Context.Channel.SendMessageAsync($"Game Over, The word was {Word}");
-                    await PlayAgain();
+                    await Context.Channel.SendMessageAsync($"{HangmanOutput}Game Over, The word was {Word}. {PlayAgain()}");
                 }
                 else
                 {
-                    await Context.Channel.SendMessageAsync($"Sorry that was not a letter, try again! You have {GuessesRemainging} guesses remaining. " + SoFar);
+                    await Context.Channel.SendMessageAsync($"{HangmanOutput}Sorry that was not a letter, try again! You have {GuessesRemaining}. {SoFar}");
                 }
             }
         }
 
-        public async Task PlayAgain()
+        private string PlayAgain()
         {
+            GameEnd();
             Question = "Would you like to play again? [!Yes/!No]";
-            await m_Context.Channel.SendMessageAsync(Question);
             ReplayAsked = true;
+
+            return Question;
         }
 
         public async Task Help()

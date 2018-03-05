@@ -8,9 +8,9 @@ using System.Threading.Tasks;
 
 namespace DiscordBot.Modules
 {
-    public class Game : ModuleBase<SocketCommandContext>
+    public class GameArena : ModuleBase<SocketCommandContext>
     {
-        private static Dictionary<ISocketMessageChannel, Hangman> HangmanGames = new Dictionary<ISocketMessageChannel, Hangman>();
+        private static Dictionary<ISocketMessageChannel, IGame> HangmanGames = new Dictionary<ISocketMessageChannel, IGame>();
 
         [Command("PlayHangman")]
         public async Task HangmanGameAsync()
@@ -28,7 +28,7 @@ namespace DiscordBot.Modules
         [Command("Guess")]
         public async Task GuessALetter(string letter)
         {
-            if (!HangmanGames.ContainsKey(Context.Channel))
+            if (!HangmanGames.ContainsKey(Context.Channel) && HangmanGames[Context.Channel].GetType() != typeof(Hangman))
             {
                 await ReplyAsync($"You must first start a game of hangman!");
                 return;
@@ -39,8 +39,10 @@ namespace DiscordBot.Modules
                 await ReplyAsync($"You can only guess a single letter at a time! Try [!WordIs] to guess a word.");
                 return;
             }
-
-            await HangmanGames[Context.Channel].GuessALetter(letter[0]);            
+            
+            //TODO: Is there a better way to do this?
+            Hangman CurrentGame = HangmanGames[Context.Channel] as Hangman;
+            await CurrentGame.GuessALetter(letter[0]);
         }
 
         //If the users wants to guess the whole word.
@@ -120,7 +122,7 @@ namespace DiscordBot.Modules
 
             if (HangmanGames.ContainsKey(Context.Channel))
             {
-                HangmanGames[Context.Channel].Help();
+                await HangmanGames[Context.Channel].Help();
                 return;
             }
         }
