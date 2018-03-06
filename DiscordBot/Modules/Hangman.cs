@@ -29,11 +29,6 @@ namespace DiscordBot.Modules
 
         private List<char> GuessedLetters;
 
-        public bool QuestionAsked
-        {
-            get { return Question.Length > 0; }
-        }
-
         public string Question
         {
             get; protected set;
@@ -943,7 +938,7 @@ namespace DiscordBot.Modules
 
             GuessedLetters = new List<char>();
 
-            await Context.Channel.SendMessageAsync($"I Got a new word for you, its {Word.Length} Characters Long");
+            await Context.Channel.SendMessageAsync($"I've got a new word for you, its {Word.Length} characters long");
         }
 
         private void GameEnd()
@@ -966,10 +961,13 @@ namespace DiscordBot.Modules
             if (GuessesRemaining > 0)
             {
                 Question = "Are you sure you want to reset the game? [!Yes/!No]";
+                await Context.Channel.SendMessageAsync(Question);
+                ReplayAsked = true;
             }
-
-            await Context.Channel.SendMessageAsync(Question);
-            ReplayAsked = true;
+            else if (GuessesRemaining == 0)
+            {
+                await CreateNewGame();
+            }
         }
 
         public async Task Yes()
@@ -989,7 +987,7 @@ namespace DiscordBot.Modules
                 return;
             }
 
-            await Context.Channel.SendMessageAsync("Huh?");
+            await Context.Channel.SendMessageAsync("Huh? I didn't ask you anything.");
         }
 
         public async Task No()
@@ -1030,7 +1028,15 @@ namespace DiscordBot.Modules
             else
             {
                 GuessesRemaining--;
-                await Context.Channel.SendMessageAsync($"{HangmanOutput} No! You have {GuessesRemainingString}");
+                if (GuessesRemaining == 0)
+                {
+                    await Context.Channel.SendMessageAsync($"{HangmanOutput} No! The word was {Word}. {PlayAgain()}");
+                    GameEnd();
+                }
+                else
+                {
+                    await Context.Channel.SendMessageAsync($"{HangmanOutput} No! You have {GuessesRemaining}");
+                }                                   
             }
 
             WordGuessed = String.Empty;

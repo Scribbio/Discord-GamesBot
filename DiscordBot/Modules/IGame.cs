@@ -4,11 +4,6 @@ namespace DiscordBot.Modules
 {
     internal interface IGame
     {
-        bool QuestionAsked
-        {
-            get;
-        }
-
         string Question
         {
             get;
