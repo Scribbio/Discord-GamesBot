@@ -34,6 +34,248 @@ namespace DiscordBot.Modules
             get; protected set;
         }
 
+        private string HangmanOutput
+        {
+            get
+            {
+                switch (GuessesRemaining)
+                {
+                    case 8:
+                        return "```\n/ ---|\n|\n|\n|\n|\n```";
+                    case 7:
+                        return "```\n/ ---|\n|    o\n|\n|\n|\n```";
+                    case 6:
+                        return "```\n/ ---|\n|    o\n|    |\n|\n|\n```";
+                    case 5:
+                        return "```\n/ ---|\n|    o\n|   /|\n|\n|\n```";
+                    case 4:
+                        return "```\n/ ---|\n|    o\n|   /|\\\n|\n|\n```";
+                    case 3:
+                        return "```\n/ ---|\n|    o\n|   /|\\\n|\n|\n|\n```";
+                    case 2:
+                        return "```\n/ ---|\n|    o\n|   /|\\\n|    |\n|\n|\n```";
+                    case 1:
+                        return "```\n/ ---|\n|    o\n|   /|\\\n|    |\n|   /\n|\n```";
+                    case 0:
+                        return "```\n/ ---|\n|    o\n|   /|\\\n|    |\n|   / \\\n|\n```";
+                }
+
+                return String.Empty;
+            }
+        }
+
+        public Hangman(SocketCommandContext context)
+        {
+            Context = context;
+        }
+
+        public async Task CreateNewGame()
+        {
+            ReplayAsked = false;
+            WordAccident = false;
+            Question = String.Empty;
+
+            GuessesRemaining = 9;
+
+            Word = GetNewWord();
+            DiscoveredSoFar = new string('-', Word.Length);
+            WordGuessed = String.Empty;
+
+            GuessedLetters = new List<char>();
+
+            await Context.Channel.SendMessageAsync($"I've got a new word for you, its {Word.Length} characters long");
+        }
+
+        private void GameEnd()
+        {
+            Word = String.Empty;
+            DiscoveredSoFar = String.Empty;
+            GuessedLetters = new List<char>();
+            GuessesRemaining = 0;
+        }
+
+        private static string GetNewWord()
+        {
+            Random picker = new Random();
+            int pickIndex = picker.Next(0, WordDictionary.Count);
+            return WordDictionary[pickIndex];
+        }
+
+        public async Task ResetGame()
+        {
+            if (GuessesRemaining > 0)
+            {
+                Question = "Are you sure you want to reset the game? [!Yes/!No]";
+                await Context.Channel.SendMessageAsync(Question);
+                ReplayAsked = true;
+            }
+            else if (GuessesRemaining == 0)
+            {
+                await CreateNewGame();
+            }
+        }
+
+        public async Task Yes()
+        {
+            Question = String.Empty;
+
+            if (ReplayAsked)
+            {
+                await CreateNewGame();
+                return;
+            }
+
+            if (WordAccident)
+            {
+                WordAccident = false;
+                await GuessAWord(WordGuessed, true);
+                return;
+            }
+
+            await Context.Channel.SendMessageAsync("Huh? I didn't ask you anything.");
+        }
+
+        public async Task No()
+        {
+            Question = String.Empty;
+
+            ReplayAsked = false;
+            WordAccident = false;
+
+            await Context.Channel.SendMessageAsync("Okay!");
+            return;
+        }
+
+        public async Task GuessAWord(string guessedWord, bool overrideCheck = false)
+        {
+            if (GuessesRemaining <= 0)
+            {
+                await Context.Channel.SendMessageAsync("You do not have any guesses remainging, please [!ResetGame] or [!Quit] and start a different game.");
+                return;
+            }
+
+            if (!overrideCheck)
+            {
+                if (guessedWord.Length <= 1)
+                {
+                    Question = "Did you mean to guess a word? [!Yes/!No]";
+                    await Context.Channel.SendMessageAsync(Question);
+                    WordGuessed = guessedWord;
+                    WordAccident = true;
+                    return;
+                }
+            }
+
+            if (guessedWord.ToLower() == Word)
+            {
+                await Context.Channel.SendMessageAsync($"Well done, you've correctly guessed the word, with {GuessesRemainingString} {PlayAgain()}");
+            }
+            else
+            {
+                GuessesRemaining--;
+                if (GuessesRemaining == 0)
+                {
+                    await Context.Channel.SendMessageAsync($"{HangmanOutput} No! The word was {Word}. {PlayAgain()}");
+                    GameEnd();
+                }
+                else
+                {
+                    await Context.Channel.SendMessageAsync($"{HangmanOutput} No! You have {GuessesRemaining}");
+                }                                   
+            }
+
+            WordGuessed = String.Empty;
+        }
+
+        public async Task GuessALetter(char guessedLetter)
+        {
+            if (GuessesRemaining <= 0)
+            {
+                await Context.Channel.SendMessageAsync("You do not have any guesses remainging, please [!ResetGame] or [!Quit] and start a different game.");
+                return;
+            }
+
+            if (GuessedLetters.Contains(guessedLetter))
+            {
+                await Context.Channel.SendMessageAsync($"The letter {guessedLetter} has already been guessed! Try again!");
+                return;
+            }
+
+            GuessedLetters.Add(guessedLetter);
+            GuessedLetters.Sort();
+            DiscoveredSoFar = String.Empty;
+
+            // Using I to mark the index point on where to add the letter if it was guessed right
+            foreach (char CurrentWordCharacter in Word.ToCharArray())
+            {
+                if (GuessedLetters.Contains(CurrentWordCharacter))
+                {
+                    DiscoveredSoFar += CurrentWordCharacter;
+                }
+                else
+                {
+                    DiscoveredSoFar += "-";
+                }
+            }
+
+            //Bool to switch off if there is still an unguessed character
+            bool gameComplete = !DiscoveredSoFar.Contains("-");
+            if (gameComplete)
+            {
+                await Context.Channel.SendMessageAsync($"Great Job! The word was {Word}. {PlayAgain()}");
+                return;
+            }
+
+            //Return the letters guessed so far
+            string guessedSoFar = String.Join(", ", GuessedLetters);
+            string alreadyTried = $"So far you have {DiscoveredSoFar} and you have already tried {guessedSoFar}";
+
+            //Return the Letters that were correctly guessed in their correct position.
+            bool GuessedRight = Word.Contains(guessedLetter);
+            if (GuessedRight)
+            {
+                await Context.Channel.SendMessageAsync($"You Got It! {alreadyTried}");
+            }
+            else
+            {
+                GuessesRemaining--;
+
+                if (GuessesRemaining <= 0)
+                {
+                    await Context.Channel.SendMessageAsync($"{HangmanOutput}Game Over, The word was {Word}. {PlayAgain()}");
+                }
+                else
+                {
+                    await Context.Channel.SendMessageAsync($"{HangmanOutput}Sorry that was not a letter, try again! You have {GuessesRemaining}. {alreadyTried}");
+                }
+            }
+        }
+
+        private string PlayAgain()
+        {
+            GameEnd();
+            Question = "Would you like to play again? [!Yes/!No]";
+            ReplayAsked = true;
+
+            return Question;
+        }
+
+        public async Task Help()
+        {
+            StringBuilder output = new StringBuilder();
+            output.AppendLine("```");
+            output.AppendLine("!Guess X - Guesses a letter where X is the letter.");
+            output.AppendLine("!WordIs WORD - Guess the word where WORD is the word.");
+            output.AppendLine("!ResetGame - Restarts the game.");
+            output.AppendLine("!Quit - Quits the game.");
+            output.AppendLine("!Help - Shows this output.");
+            output.AppendLine("   !Yes - Response in the affirmative to a question.");
+            output.AppendLine("   !No - Responds in the negative to a question.");
+            output.AppendLine("```");
+
+            await Context.Channel.SendMessageAsync(output.ToString());
+        }
+
         //The list of words to select from.
         private static List<string> WordDictionary = new List<string>()
         {
@@ -888,245 +1130,6 @@ namespace DiscordBot.Modules
             "you",
             "young"
         };
-
-        private string HangmanOutput
-        {
-            get
-            {
-                switch (GuessesRemaining)
-                {
-                    case 8:
-                        return "```\n/ ---|\n|\n|\n|\n|\n```";
-                    case 7:
-                        return "```\n/ ---|\n|    o\n|\n|\n|\n```";
-                    case 6:
-                        return "```\n/ ---|\n|    o\n|    |\n|\n|\n```";
-                    case 5:
-                        return "```\n/ ---|\n|    o\n|   /|\n|\n|\n```";
-                    case 4:
-                        return "```\n/ ---|\n|    o\n|   /|\\\n|\n|\n```";
-                    case 3:
-                        return "```\n/ ---|\n|    o\n|   /|\\\n|\n|\n|\n```";
-                    case 2:
-                        return "```\n/ ---|\n|    o\n|   /|\\\n|    |\n|\n|\n```";
-                    case 1:
-                        return "```\n/ ---|\n|    o\n|   /|\\\n|    |\n|   /\n|\n```";
-                    case 0:
-                        return "```\n/ ---|\n|    o\n|   /|\\\n|    |\n|   / \\\n|\n```";
-                }
-
-                return String.Empty;
-            }
-        }
-
-        public Hangman(SocketCommandContext context)
-        {
-            Context = context;
-        }
-
-        public async Task CreateNewGame()
-        {
-            ReplayAsked = false;
-            WordAccident = false;
-            Question = String.Empty;
-
-            GuessesRemaining = 9;
-
-            Word = GetNewWord();
-            DiscoveredSoFar = new string('-', Word.Length);
-            WordGuessed = String.Empty;
-
-            GuessedLetters = new List<char>();
-
-            await Context.Channel.SendMessageAsync($"I've got a new word for you, its {Word.Length} characters long");
-        }
-
-        private void GameEnd()
-        {
-            Word = String.Empty;
-            DiscoveredSoFar = String.Empty;
-            GuessedLetters = new List<char>();
-            GuessesRemaining = 0;
-        }
-
-        private static string GetNewWord()
-        {
-            Random picker = new Random();
-            int pickIndex = picker.Next(0, WordDictionary.Count);
-            return WordDictionary[pickIndex];
-        }
-
-        public async Task ResetGame()
-        {
-            if (GuessesRemaining > 0)
-            {
-                Question = "Are you sure you want to reset the game? [!Yes/!No]";
-                await Context.Channel.SendMessageAsync(Question);
-                ReplayAsked = true;
-            }
-            else if (GuessesRemaining == 0)
-            {
-                await CreateNewGame();
-            }
-        }
-
-        public async Task Yes()
-        {
-            Question = String.Empty;
-
-            if (ReplayAsked)
-            {
-                await CreateNewGame();
-                return;
-            }
-
-            if (WordAccident)
-            {
-                WordAccident = false;
-                await GuessAWord(WordGuessed, true);
-                return;
-            }
-
-            await Context.Channel.SendMessageAsync("Huh? I didn't ask you anything.");
-        }
-
-        public async Task No()
-        {
-            Question = String.Empty;
-
-            ReplayAsked = false;
-            WordAccident = false;
-
-            await Context.Channel.SendMessageAsync("Okay!");
-            return;
-        }
-
-        public async Task GuessAWord(string guessedWord, bool overrideCheck = false)
-        {
-            if (GuessesRemaining <= 0)
-            {
-                await Context.Channel.SendMessageAsync("You do not have any guesses remainging, please [!ResetGame] or [!Quit] and start a different game.");
-                return;
-            }
-
-            if (!overrideCheck)
-            {
-                if (guessedWord.Length <= 1)
-                {
-                    Question = "Did you mean to guess a word? [!Yes/!No]";
-                    await Context.Channel.SendMessageAsync(Question);
-                    WordGuessed = guessedWord;
-                    WordAccident = true;
-                    return;
-                }
-            }
-
-            if (guessedWord.ToLower() == Word)
-            {
-                await Context.Channel.SendMessageAsync($"Well done, you've correctly guessed the word, with {GuessesRemainingString} {PlayAgain()}");
-            }
-            else
-            {
-                GuessesRemaining--;
-                if (GuessesRemaining == 0)
-                {
-                    await Context.Channel.SendMessageAsync($"{HangmanOutput} No! The word was {Word}. {PlayAgain()}");
-                    GameEnd();
-                }
-                else
-                {
-                    await Context.Channel.SendMessageAsync($"{HangmanOutput} No! You have {GuessesRemaining}");
-                }                                   
-            }
-
-            WordGuessed = String.Empty;
-        }
-
-        public async Task GuessALetter(char guessedLetter)
-        {
-            if (GuessesRemaining <= 0)
-            {
-                await Context.Channel.SendMessageAsync("You do not have any guesses remainging, please [!ResetGame] or [!Quit] and start a different game.");
-                return;
-            }
-
-            if (GuessedLetters.Contains(guessedLetter))
-            {
-                await Context.Channel.SendMessageAsync($"The letter {guessedLetter} has already been guessed! Try again!");
-                return;
-            }
-
-            GuessedLetters.Add(guessedLetter);
-            GuessedLetters.Sort();
-            DiscoveredSoFar = String.Empty;
-
-            // Using I to mark the index point on where to add the letter if it was guessed right
-            foreach (char CurrentWordCharacter in Word.ToCharArray())
-            {
-                if (GuessedLetters.Contains(CurrentWordCharacter))
-                {
-                    DiscoveredSoFar += CurrentWordCharacter;
-                }
-                else
-                {
-                    DiscoveredSoFar += "-";
-                }
-            }
-
-            //Bool to switch off if there is still an unguessed character
-            bool gameComplete = !DiscoveredSoFar.Contains("-");
-            if (gameComplete)
-            {
-                await Context.Channel.SendMessageAsync($"Great Job! The word was {Word}. {PlayAgain()}");
-                return;
-            }
-
-            //Return the letters guessed so far
-            string guessedSoFar = String.Join(", ", GuessedLetters);
-            string alreadyTried = $"So far you have {DiscoveredSoFar} and you have already tried {guessedSoFar}";
-
-            //Return the Letters that were correctly guessed in their correct position.
-            bool GuessedRight = Word.Contains(guessedLetter);
-            if (GuessedRight)
-            {
-                await Context.Channel.SendMessageAsync($"You Got It! {alreadyTried}");
-            }
-            else
-            {
-                GuessesRemaining--;
-
-                if (GuessesRemaining <= 0)
-                {
-                    await Context.Channel.SendMessageAsync($"{HangmanOutput}Game Over, The word was {Word}. {PlayAgain()}");
-                }
-                else
-                {
-                    await Context.Channel.SendMessageAsync($"{HangmanOutput}Sorry that was not a letter, try again! You have {GuessesRemaining}. {alreadyTried}");
-                }
-            }
-        }
-
-        private string PlayAgain()
-        {
-            GameEnd();
-            Question = "Would you like to play again? [!Yes/!No]";
-            ReplayAsked = true;
-
-            return Question;
-        }
-
-        public async Task Help()
-        {
-            await Context.Channel.SendMessageAsync("```" + Environment.NewLine +
-                                                   "!Guess X - Guesses a letter where X is the letter." + Environment.NewLine +
-                                                   "!WordIs WORD - Guess the word where WORD is the word." + Environment.NewLine +
-                                                   "!ResetGame - Restarts the game." + Environment.NewLine +
-                                                   "!Quit - Quits the game." + Environment.NewLine +
-                                                   "!Help - Shows this output." + Environment.NewLine +
-                                                   "   !Yes - Response in the affirmative to a question." + Environment.NewLine +
-                                                   "   !No - Responds in the negative to a question." +
-                                                   "```");
-        }
     }
 }
 

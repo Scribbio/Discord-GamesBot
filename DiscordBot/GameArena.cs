@@ -15,7 +15,7 @@ namespace DiscordBot.Modules
         {
             get
             {
-                if(ActiveGames.ContainsKey(Context.Channel))
+                if (ActiveGames.ContainsKey(Context.Channel))
                 {
                     return ActiveGames[Context.Channel].Question.Length > 0;
                 }
@@ -85,8 +85,14 @@ namespace DiscordBot.Modules
         {
             if (!ActiveGames.ContainsKey(Context.Channel))
             {
-                await ReplyAsync("```" + Environment.NewLine +
-                                 "!PlayHangman - Start a game of hangman. Once a game is started use [!Help] to show the game specific commands.```");
+                StringBuilder output = new StringBuilder();
+                output.AppendLine("```");
+                output.AppendLine("!PlayHangman - Start a game of hangman. Once a game is started use [!Help] to show the game specific commands.");
+                output.AppendLine("!PlayBlackjack - Start a game of blackjack. Once a game is started use [!Help] to show the game specific commands.");
+                output.AppendLine("```");
+
+                await Context.Channel.SendMessageAsync(output.ToString());
+
                 return;
             }
 
@@ -117,6 +123,12 @@ namespace DiscordBot.Modules
         [Command("Join")]
         public async Task JoinBlackjack()
         {
+            if (!ActiveGames.ContainsKey(Context.Channel) && ActiveGames[Context.Channel].GetType() != typeof(Blackjack))
+            {
+                await ReplyAsync($"You must first start a game of blackjack!");
+                return;
+            }
+
             Blackjack currentGame = ActiveGames[Context.Channel] as Blackjack;
             await currentGame.JoinTheGame(Context.User);
         }
@@ -124,8 +136,40 @@ namespace DiscordBot.Modules
         [Command("Start")]
         public async Task StartBlackjack()
         {
+            if (!ActiveGames.ContainsKey(Context.Channel) && ActiveGames[Context.Channel].GetType() != typeof(Blackjack))
+            {
+                await ReplyAsync($"You must first start a game of blackjack!");
+                return;
+            }
+
             Blackjack currentGame = ActiveGames[Context.Channel] as Blackjack;
-            await currentGame.StartTheGame();
+            await currentGame.StartTheGame(Context.Client.CurrentUser);
+        }
+
+        [Command("Hit")]
+        public async Task HitMeBlackjack()
+        {
+            if (!ActiveGames.ContainsKey(Context.Channel) && ActiveGames[Context.Channel].GetType() != typeof(Blackjack))
+            {
+                await ReplyAsync($"You must first start a game of blackjack!");
+                return;
+            }
+
+            Blackjack currentGame = ActiveGames[Context.Channel] as Blackjack;
+            await currentGame.Hit(Context.User);
+        }
+
+        [Command("Stay")]
+        public async Task StayMeBlackjack()
+        {
+            if (!ActiveGames.ContainsKey(Context.Channel) && ActiveGames[Context.Channel].GetType() != typeof(Blackjack))
+            {
+                await ReplyAsync($"You must first start a game of blackjack!");
+                return;
+            }
+
+            //Blackjack currentGame = ActiveGames[Context.Channel] as Blackjack;
+            //await currentGame.StartTheGame();
         }
 
         #endregion
@@ -193,5 +237,19 @@ namespace DiscordBot.Modules
         }
 
         #endregion
+
+        [Command("Roll Dice")]
+        public async Task RollDice()
+        {
+            List<int> diceRolls = new List<int>();
+            Random randomGenerator = new Random();
+
+            for (int i = 0; i <= 2; i++)
+            {
+                diceRolls.Add(randomGenerator.Next(1, 7));
+            }
+
+            await ReplyAsync($"You rolled {String.Join(", ", diceRolls)} which when added equals {diceRolls.Sum()} !");
+        }
     }
 }
