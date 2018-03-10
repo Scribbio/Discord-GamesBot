@@ -8,6 +8,10 @@ using System.Threading.Tasks;
 
 namespace DiscordBot.Modules
 {
+    /// <summary>
+    /// ///test
+    /// </summary>
+
     public class Blackjack : ModuleBase<SocketCommandContext>, IGame
     {
         private new SocketCommandContext Context;

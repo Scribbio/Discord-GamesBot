@@ -149,9 +149,12 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="GameArena.cs" />
+    <Compile Include="Modules\BlackJack.cs" />
     <Compile Include="Modules\CasinoAddon.cs" />
     <Compile Include="Modules\CasinoMethods.cs" />
     <Compile Include="Modules\Hangman.cs" />
+    <Compile Include="Modules\IGame.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
