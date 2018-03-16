@@ -251,5 +251,37 @@ namespace DiscordBot.Modules
 
             await ReplyAsync($"You rolled {String.Join(", ", diceRolls)} which when added equals {diceRolls.Sum()} !");
         }
+
+
+        #region Connect4 Stuff
+
+
+        [Command("PlayConnect4")]
+        public async Task PlayConnect4()
+        {
+            if (ActiveGames.ContainsKey(Context.Channel))
+            {
+                await ActiveGames[Context.Channel].ResetGame();
+                return;
+            }
+
+            ActiveGames.Add(Context.Channel, new Connect4(Context));
+            await ActiveGames[Context.Channel].CreateNewGame();
+        }
+
+
+        [Command("Drop")]
+        public async Task Drop(int col, string colour)
+        {
+
+            Connect4 currentGame = ActiveGames[Context.Channel] as Connect4;
+            await currentGame.Drop(col, colour);
+        }
     }
 }
+
+
+#endregion
+
+
+

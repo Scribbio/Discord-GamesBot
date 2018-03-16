@@ -153,6 +153,10 @@
     <Compile Include="Modules\BlackJack.cs" />
     <Compile Include="Modules\CasinoAddon.cs" />
     <Compile Include="Modules\CasinoMethods.cs" />
+    <Compile Include="Modules\Connect4.cs" />
+    <Compile Include="Modules\Deck.cs" />
+    <Compile Include="Modules\Enums\Faces.cs" />
+    <Compile Include="Modules\Enums\Suits.cs" />
     <Compile Include="Modules\Hangman.cs" />
     <Compile Include="Modules\IGame.cs" />
     <Compile Include="Program.cs" />

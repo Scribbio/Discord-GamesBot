@@ -20,7 +20,8 @@ public class Program
         _commands = new CommandService();
 
         // Avoid hard coding your token. Use an external source instead in your code.
-        string token = "NDE5MzE5Mjg2OTIzMDAxODU2.DX2XSg.PkjRtdZ3jgX8ElXxlCv_bxnZLSc";
+        string token = "NDE4OTYzMjkwNTYwMDA0MTA3.DXpRQQ.rcRtMV8Vo0bOUose7cbUrlSDkWs";
+        //string token = "NDE5MzE5Mjg2OTIzMDAxODU2.DYsOvg.EnMLM_hzi-lLxO06_ifp_qckuF8";
 
         _services = new ServiceCollection()
             .AddSingleton(_client)
