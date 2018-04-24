@@ -5,6 +5,7 @@ using Discord;
 using Discord.WebSocket;
 using Discord.Commands;
 using Microsoft.Extensions.DependencyInjection;
+using DiscordBot;
 
 public class Program
 {
@@ -20,8 +21,7 @@ public class Program
         _commands = new CommandService();
 
         // Avoid hard coding your token. Use an external source instead in your code.
-        string token = "NDE4OTYzMjkwNTYwMDA0MTA3.DXpRQQ.rcRtMV8Vo0bOUose7cbUrlSDkWs";
-        //string token = "NDE5MzE5Mjg2OTIzMDAxODU2.DYsOvg.EnMLM_hzi-lLxO06_ifp_qckuF8";
+        string token = Config.bot.token;
 
         _services = new ServiceCollection()
             .AddSingleton(_client)
@@ -34,6 +34,8 @@ public class Program
         await _client.StartAsync();
 
         await Task.Delay(-1);
+
+
     }
 
     public async Task InstallCommandsAsync()

@@ -1,4 +1,5 @@
 ﻿using Discord.Commands;
+using Discord.WebSocket;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -20,6 +21,9 @@ namespace DiscordBot.Modules
         char[,] GameState = new char[6, 7];
 
 
+        private Dictionary<SocketUser, string> PlayerTokens = new Dictionary<SocketUser, string>();
+
+
         private List<string> Slots;
 
 
@@ -31,54 +35,98 @@ namespace DiscordBot.Modules
 
         }
 
-
- 
-
-        public async Task CreateNewGame() //needs a difficulty level param
+        public async Task ChooseYourColor()
         {
 
 
-            StringBuilder message = MakeBoard(GameState);
 
-
-            await Context.Channel.SendMessageAsync(message.ToString());
         }
 
+        public async Task CreateNewGame() //needs a difficulty level param
+        {
+            StringBuilder message = MakeBoard(GameState);
 
-        public async Task Drop(int col, string colour)
+            await Context.Channel.SendMessageAsync(message.ToString());
+            await Context.Channel.SendMessageAsync($"The Connect4 board has been set up. Use [!JoinConnect4] followed by your color to join the game.");
+
+        }
+
+        public async Task JoinTheGame(SocketUser user, string color)
+        {
+            if (PlayerTokens.ContainsKey(user))
+            {
+                await Context.Channel.SendMessageAsync($"{user.Mention} You're already in the game!");
+                return;
+            }
+
+            PlayerTokens.Add(user, color.ToLower());
+
+            await Context.Channel.SendMessageAsync($"{user.Mention} has joined the game using {color}! Type [!Drop] followed by the desired column number to drop a token.");
+        }
+
+        public async Task Drop(SocketUser user, int col)
         {
             // drop into col, return row or -1 if fail
 
             char token = ' ';
 
-            if (colour == "Red")
+            string colour = PlayerTokens[user];
+
+
+            if (colour == "red")
             {
                 token = 'R';
             }
-            else if (colour == "Green")
+            else if (colour == "blue")
             {
-                token = 'G';
+                token = 'B';
             }
 
-
-            for (int row = 0; row < GameState.GetLength(0); row++)
+            for (int i = GameState.GetLength(0); i-- > 0;)
             {
-                
-                if (GameState[row, col] != 'G' && 'R' != GameState[row, col])
+                int row = i;
+
+                if (GameState[row, col] != 'B' && 'R' != GameState[row, col])
                 { 
                     GameState[row, col] = token;
                     break;
                 }
             }
 
+            await Context.Channel.SendMessageAsync($"{Context.User.Mention} has dropped {colour} into column {col}");
             StringBuilder message = MakeBoard(GameState);
 
 
             await Context.Channel.SendMessageAsync(message.ToString());
 
-        }
-    
+            if (HasWon(GameState))
+            {
+                await Context.Channel.SendMessageAsync("You win!");
+            }
 
+        }
+
+        public static bool HasWon(char[,] GameState)
+        {
+            bool win = false;
+
+            for (int i = 0; i < GameState.GetLength(0); i++)
+            {
+                for (int ix = 0; ix < GameState.GetLength(1); ix++)
+                {
+                    if (GameState[i, ix] != 0 && GameState[i, ix] == GameState[i, ix+1] 
+                        && GameState[i, ix+1] == GameState[i, ix + 2] 
+                        && GameState[i, ix+2] == GameState[i, ix + 3])
+                    {
+                        win = true;
+                        break;
+                    }
+                }
+
+            }
+
+            return win;
+        }
 
         public static StringBuilder MakeBoard(char[,] GameState)
         {
@@ -90,28 +138,41 @@ namespace DiscordBot.Modules
 
             for (int i = 0; i < rows; i++)
             {
+                sb.Append("|");
+
                 for (int ix = 0; ix < columns; ix++)
                 {
-
-                    if (GameState[i, ix] != 'R' && GameState[i, ix] != 'G')
+                    if (GameState[i, ix] != 'R' && GameState[i, ix] != 'B')
                     {
                         sb.Append('⚫');
                     }
-                    else if (GameState[i, ix] == 'G')
+                    else if (GameState[i, ix] == 'B')
                     {
                         sb.Append("🔵");
                     }
+                    else if (GameState[i, ix] == 'R')
+                    {
+                        sb.Append("🔴");
+                    }
 
+                    sb.Append("|");
                 }
 
                 sb.AppendLine();
             }
 
-            sb.Append("```");
+            for (int i = 1; i < columns; i++)
+            {
+                sb.Append(" " + i + "  ");
+            }
 
+                sb.Append("```");
 
             return (sb);
         }
+
+
+
 
 
 
